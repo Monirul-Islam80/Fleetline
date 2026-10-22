@@ -1,0 +1,241 @@
+.bar {
+  display: grid;
+  grid-template-rows: 46px 38px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px 0 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+.row + .row {
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  gap: 6px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 6px;
+}
+.mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--meter);
+  display: grid;
+  place-items: center;
+  color: var(--meter-ink);
+}
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.product {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.fleet {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.navItem {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: var(--fs-base);
+}
+.navItem:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.navItem[aria-current="page"] {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stat b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.clock {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+}
+.clockMain {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+.clockSub {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.operator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  font-size: var(--fs-sm);
+}
+.operatorName {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.operatorName span {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--tone-free);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.linkBars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 11px;
+}
+.linkBars i {
+  width: 3px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* Comms row */
+.comm {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.comm:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.commWaiting {
+  color: var(--meter-text);
+  background: var(--meter-tint);
+}
+.commAlert {
+  color: var(--tone-problem);
+}
+.flightCounts {
+  display: inline-flex;
+  gap: 3px;
+}
+.flightCounts span {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
+  color: var(--tone);
+}
+
+.demo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.demoLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  margin-right: 2px;
+}
+
+/* Laptop widths (1280 to 1520): keep every control, drop words that the icon and tooltip already carry. */
+@media (max-width: 1520px) {
+  .statLabel,
+  .secondaryLabel,
+  .demoLabel {
+    display: none;
+  }
+  .navItem {
+    padding: 0 8px;
+  }
+  .row {
+    gap: 10px;
+  }
+  .comm {
+    padding: 0 8px;
+  }
+}
+@media (max-width: 1400px) {
+  .clockSub,
+  .operatorName span {
+    display: none;
+  }
+}

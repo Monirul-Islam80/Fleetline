@@ -1,0 +1,252 @@
+/*
+  Fleetline console tokens.
+  Direction: a night-shift instrument panel. Deep navy surfaces, one warm "meter" amber for
+  computed values and the primary action, and a status language borrowed from UK road signage
+  (go green, motorway blue, warning amber, stop red). Regions are separated by hairlines, not
+  floating cards, so the screen reads as one console.
+*/
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1424;
+  --surface: #0f1a2d;
+  --surface-2: #142238;
+  --surface-3: #1a2b46;
+  --hover: #1f3253;
+  --line: #213150;
+  --line-strong: #2d4268;
+  --text: #e8eef7;
+  --text-2: #a7b4c8;
+  --text-3: #6e7f9a;
+  --focus: #7cb3ff;
+
+  --meter: #f5b800;
+  --meter-ink: #1d1500;
+  --meter-text: #ffcf3f;
+  --meter-tint: rgba(245, 184, 0, 0.1);
+  --meter-line: rgba(245, 184, 0, 0.35);
+
+  --tone-free: #2fbf7f;
+  --tone-waiting: #f5b800;
+  --tone-enroute: #4d9bff;
+  --tone-arrived: #2cc4d6;
+  --tone-onboard: #a98bfa;
+  --tone-ending: #9acd4c;
+  --tone-held: #8a9ab4;
+  --tone-bidding: #f28c47;
+  --tone-problem: #f0605a;
+  --tone-done: #5c9b80;
+  --tone-off: #5a6a85;
+  --tone-booked: #7f90b8;
+
+  --shadow-pop: 0 18px 40px rgba(2, 8, 20, 0.55), 0 0 0 1px var(--line-strong);
+  --map-filter: none;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #e9eef5;
+  --surface: #ffffff;
+  --surface-2: #f4f7fb;
+  --surface-3: #e8eef6;
+  --hover: #dde6f2;
+  --line: #d5deea;
+  --line-strong: #b9c6d8;
+  --text: #121e36;
+  --text-2: #44546d;
+  --text-3: #74839b;
+  --focus: #1f6fe5;
+
+  --meter: #f5b800;
+  --meter-ink: #1d1500;
+  --meter-text: #8a5f00;
+  --meter-tint: rgba(245, 184, 0, 0.16);
+  --meter-line: rgba(176, 125, 0, 0.45);
+
+  --tone-free: #138a57;
+  --tone-waiting: #b98300;
+  --tone-enroute: #1f6fe5;
+  --tone-arrived: #0b8fa1;
+  --tone-onboard: #7550e0;
+  --tone-ending: #5e8f12;
+  --tone-held: #64748f;
+  --tone-bidding: #c9601c;
+  --tone-problem: #cf3a33;
+  --tone-done: #3f7d62;
+  --tone-off: #8090a8;
+  --tone-booked: #5b6c94;
+
+  --shadow-pop: 0 18px 40px rgba(18, 30, 54, 0.18), 0 0 0 1px var(--line-strong);
+}
+
+:root {
+  --font: "Barlow", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-condensed: "Barlow Semi Condensed", "Barlow", "Segoe UI", system-ui, sans-serif;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-meter: 28px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --row-h: 34px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  min-width: 1280px;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--meter-tint);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Status tone helpers shared by pills, dots, row bars and map markers. */
+[data-tone="free"] { --tone: var(--tone-free); }
+[data-tone="waiting"] { --tone: var(--tone-waiting); }
+[data-tone="enroute"] { --tone: var(--tone-enroute); }
+[data-tone="arrived"] { --tone: var(--tone-arrived); }
+[data-tone="onboard"] { --tone: var(--tone-onboard); }
+[data-tone="ending"] { --tone: var(--tone-ending); }
+[data-tone="held"] { --tone: var(--tone-held); }
+[data-tone="bidding"] { --tone: var(--tone-bidding); }
+[data-tone="problem"] { --tone: var(--tone-problem); }
+[data-tone="done"] { --tone: var(--tone-done); }
+[data-tone="off"] { --tone: var(--tone-off); }
+[data-tone="booked"] { --tone: var(--tone-booked); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Leaflet base styles we rely on, trimmed from leaflet.css to what the console uses. */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-zoom-box {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.leaflet-container {
+  overflow: hidden;
+  background: var(--surface-2);
+  outline: 0;
+  font: inherit;
+}
+.leaflet-tile,
+.leaflet-marker-icon {
+  user-select: none;
+}
+.leaflet-tile {
+  filter: var(--map-filter);
+  visibility: hidden;
+}
+.leaflet-tile-loaded {
+  visibility: inherit;
+}
+.leaflet-container img.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  width: 256px;
+  height: 256px;
+}
+.leaflet-pane { z-index: 400; }
+.leaflet-tile-pane { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-marker-pane { z-index: 600; }
+.leaflet-tooltip-pane { z-index: 650; }
+.leaflet-popup-pane { z-index: 700; }
+.leaflet-zoom-animated { transform-origin: 0 0; }
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+}
+.leaflet-interactive { cursor: pointer; }
+.leaflet-grab { cursor: grab; }
+.leaflet-dragging .leaflet-grab { cursor: move; }
+.leaflet-control-container .leaflet-bottom.leaflet-right {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 800;
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: var(--text-3);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-top-left-radius: var(--r-sm);
+}
+.leaflet-control-attribution a {
+  color: var(--text-2);
+}
+.leaflet-marker-icon.driver-marker {
+  transition: transform 0.95s linear;
+}
+.leaflet-zoom-anim .leaflet-marker-icon.driver-marker {
+  transition: none;
+}

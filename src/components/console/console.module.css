@@ -1,0 +1,33 @@
+.app {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(330px, 50%) minmax(0, 1fr);
+  /* Without this the column grows to the widest child's content and the page scrolls sideways. */
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--bg);
+}
+
+.work {
+  display: grid;
+  grid-template-columns: minmax(460px, 1.25fr) minmax(270px, 0.7fr) minmax(380px, 1.35fr);
+  min-height: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.region {
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+.region + .region {
+  border-left: 1px solid var(--line);
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  color: var(--text-3);
+  font-size: var(--fs-md);
+}

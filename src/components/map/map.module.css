@@ -1,0 +1,207 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.search {
+  flex: 1;
+  min-width: 140px;
+  position: relative;
+}
+.searchControl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+.searchControl:focus-within {
+  border-color: var(--focus);
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+.results {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-pop);
+}
+.result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.result[aria-selected="true"] {
+  background: var(--surface-3);
+}
+.resultSub {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+.stat {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.stat b {
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.mapWrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.map {
+  position: absolute;
+  inset: 0;
+}
+.zoom {
+  position: absolute;
+  z-index: 800;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-pop);
+  background: var(--surface);
+}
+.zoom button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text-2);
+}
+.zoom button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.zoom button + button {
+  border-top: 1px solid var(--line);
+}
+
+.legend {
+  position: absolute;
+  z-index: 800;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  max-width: calc(100% - 150px);
+  padding: 5px 9px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Leaflet renders markers outside React, so these classes are global. */
+.map :global(.driver-marker) {
+  background: none;
+  border: 0;
+}
+.map :global(.chip) {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--tone);
+  color: #08111f;
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 85%, transparent), 0 3px 8px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.map :global(.chip[data-tone="off"]) {
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+.map :global(.chip.is-focused) {
+  box-shadow: 0 0 0 2px var(--text), 0 0 0 6px color-mix(in srgb, var(--tone) 45%, transparent);
+  z-index: 2;
+}
+.map :global(.pickup-pin) {
+  background: none;
+  border: 0;
+}
+.map :global(.pin) {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 3px;
+  background: var(--tone);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.map :global(.pin.is-overdue) {
+  animation: pinPulse 1.2s ease-in-out infinite;
+}
+@keyframes pinPulse {
+  50% {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 7px color-mix(in srgb, var(--tone) 35%, transparent);
+  }
+}
+.map :global(.leaflet-tooltip) {
+  position: absolute;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
