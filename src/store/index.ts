@@ -1,21 +1,36 @@
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import { combineReducers, configureStore, createAsyncThunk, type ThunkAction, type UnknownAction } from "@reduxjs/toolkit";
+import type { ApiClient } from "@/api/client";
+import { createLiveApi } from "@/api/live";
+import { createMockApi } from "@/api/mock";
+import { APP } from "@/config/app";
 import booking from "./slices/bookingSlice";
-import comms from "./slices/commsSlice";
 import fleet from "./slices/fleetSlice";
+import inbox from "./slices/inboxSlice";
 import jobs from "./slices/jobsSlice";
 import ui from "./slices/uiSlice";
 
-const rootReducer = combineReducers({ jobs, fleet, booking, ui, comms });
+const rootReducer = combineReducers({ jobs, fleet, booking, ui, inbox });
 
-/** A fresh store per mount (Next.js App Router pattern: never share a store between requests). */
-export const makeStore = () =>
-  configureStore({
+/** Thunks reach the backend only through `extra.api`, so swapping mock for live is one line. */
+export interface ThunkExtra {
+  api: ApiClient;
+}
+
+/** A fresh store per mount (Next.js App Router: never share a store between requests). */
+export function makeStore() {
+  const extra = {} as ThunkExtra;
+  const store = configureStore({
     reducer: rootReducer,
-    // The checks walk the whole state on every action; with 1 Hz ticks they cost more than they catch.
-    middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false }),
+    // The dev checks walk the whole state on every action; with 1 Hz updates they cost more than they catch.
+    middleware: (getDefault) => getDefault({ thunk: { extraArgument: extra }, serializableCheck: false, immutableCheck: false }),
   });
+  extra.api = APP.apiMode === "live" ? createLiveApi(APP.apiUrl) : createMockApi(store.getState);
+  return store;
+}
 
 export type AppStore = ReturnType<typeof makeStore>;
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = AppStore["dispatch"];
-export type AppThunk<R = void> = (dispatch: AppDispatch, getState: () => RootState) => R;
+export type AppThunk<R = void> = ThunkAction<R, RootState, ThunkExtra, UnknownAction>;
+
+export const createAppThunk = createAsyncThunk.withTypes<{ state: RootState; dispatch: AppDispatch; extra: ThunkExtra; rejectValue: string }>();

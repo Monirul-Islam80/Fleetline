@@ -1,0 +1,203 @@
+.view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+.view > * {
+  flex-shrink: 0;
+}
+.cardBody {
+  padding: 14px 14px 12px;
+}
+.queryForm {
+  display: grid;
+  gap: 0 40px;
+}
+.queryCol {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 14px;
+  align-content: start;
+}
+.queryCol > label {
+  justify-self: end;
+}
+.queryControl {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.queryControl > * {
+  flex: 1;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.actions .wide {
+  min-width: 190px;
+}
+.summary {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}
+.pager {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.pageBtn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.pageBtn[aria-current="page"] {
+  background: var(--waiting);
+}
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.results {
+  min-height: 300px;
+  display: flex;
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+}
+.results > * {
+  flex: 1;
+}
+.rowButtons {
+  display: flex;
+  gap: 3px;
+}
+
+/* ---------- Logs ---------- */
+.ruler {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ruler span {
+  padding: 3px 0 5px 6px;
+  border-left: 1px solid var(--line-strong);
+}
+.track {
+  position: relative;
+  height: 30px;
+  margin-top: 4px;
+  border-radius: var(--r);
+  background: #fff;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.trackFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--waiting);
+}
+.trackHour {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(100% / 24);
+  border: 0;
+  background: transparent;
+}
+.trackHour:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.filters {
+  display: grid;
+  grid-template-columns: 1.1fr repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+.dayNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--input-line);
+  border-radius: var(--r);
+  background: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+.cats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.cats button {
+  height: 30px;
+  justify-content: flex-start;
+}
+.logTools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 6px;
+}
+.logEmpty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px 2px;
+  color: var(--text-2);
+  font-style: italic;
+}
+.logList {
+  margin-top: 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: #fff;
+  max-height: none;
+}
+.log {
+  display: grid;
+  grid-template-columns: 80px 120px 90px 1fr;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--row-line);
+  font-size: 13px;
+}
+.log time {
+  font-weight: 700;
+}
+.cat {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--primary);
+}
+.raw {
+  margin: 10px 0 0;
+  padding: 10px;
+  max-height: 400px;
+  overflow: auto;
+  border-radius: var(--r);
+  background: #111827;
+  color: #d1fae5;
+  font-size: 12px;
+}

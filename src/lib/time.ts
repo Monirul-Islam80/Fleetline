@@ -73,3 +73,22 @@ export function fleetTimeToEpoch(date: FleetDate, hour: number, minute: number):
   return guess - offsetMs(guess);
 }
 
+
+/** Start and end (inclusive) of a fleet calendar day. Accepts typed date text or any time on that day. */
+export function fleetDayRange(day: string | Millis, now: Millis): { start: Millis; end: Millis } | null {
+  const date = typeof day === "number" ? fleetWallClock(day) : parseFleetDate(day, now);
+  if (!date) return null;
+  const start = fleetTimeToEpoch(date, 0, 0);
+  return { start, end: fleetTimeToEpoch(date, 23, 59) + 59_999 };
+}
+
+/** dd/mm/yyyy for a fleet day, used when the calendar picks a date. */
+export function fleetDateText(at: Millis): string {
+  const w = fleetWallClock(at);
+  return `${String(w.day).padStart(2, "0")}/${String(w.month).padStart(2, "0")}/${w.year}`;
+}
+
+export function fleetDateParts(at: Millis): FleetDate {
+  const { year, month, day } = fleetWallClock(at);
+  return { year, month, day };
+}

@@ -1,0 +1,553 @@
+.view {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(424px, 55%) minmax(150px, 1fr);
+  gap: 10px;
+}
+.top {
+  display: grid;
+  grid-template-columns: minmax(440px, 1.9fr) minmax(220px, 1fr) minmax(320px, 1.8fr) minmax(220px, 0.95fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.card {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+/* ---------- Booking form ---------- */
+.form {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: start;
+  align-items: center;
+  gap: 6px 10px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  position: relative;
+}
+.row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.w2 {
+  flex-grow: 2 !important;
+}
+.w3 {
+  flex-grow: 3 !important;
+}
+.fixed {
+  flex: 0 0 auto !important;
+}
+.rule {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: 3px 0;
+  background: var(--line);
+}
+.formFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+}
+.dotBtn {
+  color: #fff;
+}
+.dotBtn svg {
+  color: #ffb547;
+}
+.dotBtn[aria-pressed="true"] {
+  background: var(--waiting);
+}
+.dotBtn[aria-pressed="true"] svg {
+  color: #fff;
+}
+.save {
+  margin-left: auto;
+  min-width: 190px;
+}
+.popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+}
+
+/* Address suggestions */
+.combo {
+  position: relative;
+  min-width: 0;
+}
+.list {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.group {
+  padding: 5px 7px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.option {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.option[aria-selected="true"] {
+  background: #e3ecfd;
+}
+.option small {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.noMatch {
+  padding: 7px;
+  color: var(--text-3);
+}
+
+/* ---------- Helper column ---------- */
+.helper {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.etaRow {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr 1fr;
+  gap: 6px;
+}
+.lists {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.7fr);
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #fff;
+  overflow: hidden;
+}
+.listCol {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+}
+.listCol:nth-child(2) {
+  border-right: 0;
+}
+.listCol.full {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  border-right: 0;
+}
+.listHead {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--label);
+}
+.listBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  padding: 5px;
+}
+.fare {
+  display: grid;
+  gap: 6px;
+}
+.fareRow {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+.quote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: var(--r);
+  border: 1px solid #d6dcef;
+  background: #eef1fb;
+  color: var(--text-2);
+  font-weight: 500;
+  text-align: left;
+}
+.quote:disabled {
+  cursor: default;
+}
+.quote:not(:disabled):hover {
+  border-color: var(--primary);
+}
+.quote[aria-pressed="true"] {
+  background: #dfe9ff;
+  border-color: var(--primary);
+  color: var(--text);
+}
+.quoteMark {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: #fde2e2;
+  color: var(--danger);
+}
+.quote:not(:disabled) .quoteMark {
+  background: #dcf5e5;
+  color: var(--ok);
+}
+.quote b {
+  color: var(--text);
+}
+
+/* ---------- Map card ---------- */
+.mapCard {
+  padding: 8px;
+}
+.mapWrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.mapCanvas {
+  position: absolute;
+  inset: 0;
+}
+.mapType {
+  position: absolute;
+  z-index: 800;
+  top: 10px;
+  left: 10px;
+  height: 34px;
+  padding: 0 28px 0 12px;
+  border-radius: 2px;
+  border: 0;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M6 9h12l-6 7z'/%3E%3C/svg%3E") no-repeat right 9px center;
+  appearance: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.note {
+  position: absolute;
+  z-index: 800;
+  top: 10px;
+  left: 10px;
+  max-width: 70%;
+  padding: 8px 12px;
+  border: 2px solid #c79a00;
+  background: #ffe34d;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.mapControls {
+  position: absolute;
+  z-index: 800;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mapControls button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 2px;
+  background: #fff;
+  color: #555;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.mapControls button:hover {
+  color: #111;
+}
+.mapControls button[aria-pressed="true"] {
+  color: var(--primary);
+}
+.mapControls .push {
+  margin-top: auto;
+}
+.zoom {
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.zoom button {
+  box-shadow: none;
+}
+.zoom button + button {
+  border-top: 1px solid #e6e6e6;
+}
+.expand {
+  position: absolute;
+  z-index: 801;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: #111;
+  color: #fff;
+}
+.mapBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 8px;
+  position: relative;
+}
+.mapBar .search {
+  flex: 1;
+  min-width: 90px;
+}
+.mapBar button {
+  padding: 0 8px;
+  height: 28px;
+  font-size: 12px;
+}
+.mapStat {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--label);
+  white-space: nowrap;
+  padding: 0 2px;
+}
+.mapStatDark {
+  composes: mapStat;
+  padding: 5px 8px;
+  border-radius: var(--r);
+  background: var(--dark);
+  color: #fff;
+}
+.menu {
+  position: absolute;
+  z-index: 60;
+  bottom: calc(100% + 4px);
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+  padding: 8px;
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.menu label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.results {
+  composes: list;
+  top: auto;
+  bottom: calc(100% + 3px);
+}
+
+/* ---------- Extra booking fields (replaces the map) ---------- */
+.extras {
+  composes: form;
+}
+
+/* ---------- Waiting times ---------- */
+.waitingCard {
+  padding: 8px;
+}
+.waitingHead {
+  margin-bottom: 6px;
+}
+
+/* ---------- Jobs area ---------- */
+.jobs {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.jobsBar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.tab {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r);
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--text-2);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tab:hover {
+  background: #fff;
+}
+.tab[aria-selected="true"] {
+  background: var(--dark);
+  border-color: var(--dark);
+  color: #fff;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.toolbar > button {
+  height: 26px;
+  font-size: 12px;
+}
+.toolText {
+  height: 26px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--input-line);
+  border-radius: var(--r);
+  background: #fff;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.toolComputed {
+  composes: toolText;
+  background: var(--computed);
+  border-color: var(--computed-line);
+  color: var(--computed-text);
+  min-width: 52px;
+}
+.toolSelect {
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid var(--input-line);
+  border-radius: var(--r);
+  background: #fff;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+}
+.grid {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+}
+
+/* Job rows: soft tint from the status tone, strong blue for selection. */
+.jobRow {
+  background: color-mix(in srgb, var(--tone) 13%, #fff) !important;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 14px;
+}
+.jobRowSelected {
+  background: var(--row-selected) !important;
+  color: var(--row-selected-text);
+}
+.timeCell {
+  font-weight: 700;
+}
+.overdue {
+  background: var(--danger);
+  color: #fff;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.info {
+  display: flex;
+  gap: 3px;
+  overflow: hidden;
+}
+
+/* ---------- Flights list ---------- */
+.flight {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr 30px 1.5fr 1.2fr 1.2fr 1fr 0.8fr 110px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--row-line);
+  font-size: 12.5px;
+}
+.flight small {
+  color: var(--text-3);
+}
+
+/* Laptop screens: the waiting-times panel steps aside so the form and map keep their width. */
+@media (max-width: 1440px) {
+  .top {
+    grid-template-columns: minmax(420px, 1.9fr) minmax(210px, 1fr) minmax(300px, 1.8fr);
+  }
+  .waitingCard {
+    display: none;
+  }
+}

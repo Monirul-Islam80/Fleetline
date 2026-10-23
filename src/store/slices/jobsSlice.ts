@@ -1,6 +1,6 @@
 import { createEntityAdapter, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { Job, JobEvent } from "@/types/domain";
-import { seeded, simulationApplied } from "../actions";
+import { seeded, realtimeReceived } from "../actions";
 
 export const jobsAdapter = createEntityAdapter<Job>();
 
@@ -34,7 +34,7 @@ const jobsSlice = createSlice({
         state.nextNumber = action.payload.nextJobNumber;
         state.events = [];
       })
-      .addCase(simulationApplied, (state, action) => {
+      .addCase(realtimeReceived, (state, action) => {
         if (action.payload.jobs.length) jobsAdapter.updateMany(state, action.payload.jobs);
         if (action.payload.events.length) {
           state.events.unshift(...action.payload.events);

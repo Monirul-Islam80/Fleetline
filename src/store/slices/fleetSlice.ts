@@ -1,7 +1,7 @@
 import { createEntityAdapter, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { ZONES } from "@/mock/geography";
 import type { Customer, Driver, Millis, Zone } from "@/types/domain";
-import { seeded, simulationApplied } from "../actions";
+import { seeded, realtimeReceived } from "../actions";
 
 export const driversAdapter = createEntityAdapter<Driver>();
 
@@ -21,6 +21,9 @@ const fleetSlice = createSlice({
     driverChanged(state, action: PayloadAction<{ id: string; changes: Partial<Driver> }>) {
       driversAdapter.updateOne(state.drivers, action.payload);
     },
+    customerAdded(state, action: PayloadAction<Customer>) {
+      state.customers.push(action.payload);
+    },
     zoneFlagsCleared(state) {
       state.zones = state.zones.map((z) => ({ ...z, surge: false, fullyBooked: false }));
     },
@@ -34,7 +37,7 @@ const fleetSlice = createSlice({
         state.now = action.payload.now;
         state.ready = true;
       })
-      .addCase(simulationApplied, (state, action) => {
+      .addCase(realtimeReceived, (state, action) => {
         state.now = action.payload.now;
         if (action.payload.drivers.length) driversAdapter.updateMany(state.drivers, action.payload.drivers);
         if (action.payload.zones) state.zones = action.payload.zones;
@@ -42,5 +45,5 @@ const fleetSlice = createSlice({
   },
 });
 
-export const { driverChanged, zoneFlagsCleared } = fleetSlice.actions;
+export const { driverChanged, customerAdded, zoneFlagsCleared } = fleetSlice.actions;
 export default fleetSlice.reducer;

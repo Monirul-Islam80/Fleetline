@@ -1,0 +1,106 @@
+.links {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  color: var(--text-3);
+}
+.links button {
+  color: var(--primary);
+  font-weight: 500;
+}
+.links button[aria-current="true"] {
+  text-decoration: underline;
+}
+.messages {
+  margin: 0 14px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  max-height: 380px;
+  overflow: auto;
+  background: #fff;
+}
+.message {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.messageHead {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-2);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.form {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 14px;
+}
+.form > label {
+  justify-self: end;
+}
+.formRule {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--line);
+}
+.hint {
+  grid-column: 2;
+  margin-top: -6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.actionsCell {
+  display: flex;
+  gap: 3px;
+}
+.sites {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+}
+.sites label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.sites input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--card-head);
+}
+.panelTitle {
+  font-family: var(--font-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--label);
+}
+.settings {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.settings p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.multiline {
+  white-space: pre-line;
+}

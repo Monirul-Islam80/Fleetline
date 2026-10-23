@@ -1,12 +1,14 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { SITES } from "@/config/app";
 import type { JobTab } from "@/config/status";
 import { seeded } from "../actions";
 
-export type SortKey = "time" | "status" | "driver" | "pickup" | "dropoff" | "name" | "fare" | "zone" | "priority";
-export type SortDir = "asc" | "desc";
-export type DrawerId = "job" | "alerts" | "calls" | "chat" | "messages" | "staff" | "flights" | "inactive" | "zones";
+export type View = "dispatch" | "bookings" | "drivers" | "logs";
+/** Pop-over panels opened from the bar under the header. */
+export type PanelId = "staff" | "zones" | "inactive" | "calls" | "chat" | "broadcast" | "alerts" | "flights" | "sites" | "settings";
+export type ModalId = "via" | "options";
+export type SortKey = "time" | "priority" | "status" | "pickup" | "dropoff" | "name" | "zone";
 export type ToastTone = "info" | "success" | "warning" | "danger";
-export type Theme = "dark" | "light";
 
 export interface Toast {
   id: number;
@@ -15,109 +17,122 @@ export interface Toast {
 }
 
 export interface UiState {
+  view: View;
   tab: JobTab;
-  sort: { key: SortKey; dir: SortDir };
+  sort: { key: SortKey; dir: "asc" | "desc" };
   windowHours: number;
-  filters: { recurring: boolean; flights: boolean; accounts: boolean };
-  gridQuery: string;
+  filters: { recurring: boolean; tickets: boolean; groups: boolean };
+  hideZoneCols: boolean;
+  siteIds: string[];
   selectedJobId: string | null;
-  drawer: DrawerId | null;
-  shortcutsOpen: boolean;
-  theme: Theme;
-  demoMode: boolean;
-  paused: boolean;
+  panel: PanelId | null;
+  modal: ModalId | null;
+  /** The extra booking fields panel that takes the map's place. */
+  showExtras: boolean;
   showZones: boolean;
+  mapQuery: string;
   focusedDriverId: string | null;
+  /** Callsign pre-filled in the driver message panel by a Reply or Enquiry button. */
+  replyTo: string;
+  demoFeed: boolean;
+  paused: boolean;
   toasts: Toast[];
   nextToastId: number;
-  /** Alerts raised before this time count as read. */
-  alertsReadAt: number;
 }
 
 const initialState: UiState = {
+  view: "dispatch",
   tab: "dispatch",
   sort: { key: "time", dir: "asc" },
   windowHours: 4,
-  filters: { recurring: true, flights: true, accounts: true },
-  gridQuery: "",
+  filters: { recurring: true, tickets: true, groups: true },
+  hideZoneCols: false,
+  siteIds: SITES.map((s) => s.id),
   selectedJobId: null,
-  drawer: null,
-  shortcutsOpen: false,
-  theme: "dark",
-  demoMode: false,
-  paused: false,
-  showZones: true,
+  panel: null,
+  modal: null,
+  showExtras: false,
+  showZones: false,
+  mapQuery: "",
   focusedDriverId: null,
+  replyTo: "",
+  demoFeed: true,
+  paused: false,
   toasts: [],
   nextToastId: 1,
-  alertsReadAt: 0,
 };
 
-type FilterKey = keyof UiState["filters"];
+type Filter = keyof UiState["filters"];
 
 const uiSlice = createSlice({
   name: "ui",
   initialState,
   reducers: {
+    viewChanged(state, action: PayloadAction<View>) {
+      state.view = action.payload;
+      state.panel = null;
+    },
     tabChanged(state, action: PayloadAction<JobTab>) {
       state.tab = action.payload;
     },
     sortToggled(state, action: PayloadAction<SortKey>) {
-      state.sort =
-        state.sort.key === action.payload
-          ? { key: action.payload, dir: state.sort.dir === "asc" ? "desc" : "asc" }
-          : { key: action.payload, dir: "asc" };
+      const same = state.sort.key === action.payload;
+      state.sort = { key: action.payload, dir: same && state.sort.dir === "asc" ? "desc" : "asc" };
     },
     windowChanged(state, action: PayloadAction<number>) {
       state.windowHours = action.payload;
     },
-    filterToggled(state, action: PayloadAction<FilterKey>) {
+    filterToggled(state, action: PayloadAction<Filter>) {
       state.filters[action.payload] = !state.filters[action.payload];
     },
-    gridQueryChanged(state, action: PayloadAction<string>) {
-      state.gridQuery = action.payload;
+    zoneColsToggled(state) {
+      state.hideZoneCols = !state.hideZoneCols;
+    },
+    sitesChanged(state, action: PayloadAction<string[]>) {
+      state.siteIds = action.payload;
     },
     jobSelected(state, action: PayloadAction<string | null>) {
-      state.selectedJobId = action.payload;
-      state.drawer = action.payload ? "job" : null;
+      state.selectedJobId = state.selectedJobId === action.payload ? null : action.payload;
     },
-    drawerOpened: {
-      reducer(state, action: PayloadAction<{ id: DrawerId; at: number }>) {
-        state.drawer = action.payload.id;
-        state.selectedJobId = null;
-        if (action.payload.id === "alerts") state.alertsReadAt = action.payload.at;
-      },
-      prepare: (id: DrawerId) => ({ payload: { id, at: Date.now() } }),
+    panelToggled(state, action: PayloadAction<PanelId>) {
+      state.panel = state.panel === action.payload ? null : action.payload;
+      state.replyTo = "";
     },
-    drawerClosed(state) {
-      state.drawer = null;
-      state.selectedJobId = null;
+    replyStarted(state, action: PayloadAction<string>) {
+      state.replyTo = action.payload;
+      state.panel = "broadcast";
     },
-    shortcutsToggled(state, action: PayloadAction<boolean | undefined>) {
-      state.shortcutsOpen = action.payload ?? !state.shortcutsOpen;
+    modalOpened(state, action: PayloadAction<ModalId | null>) {
+      state.modal = action.payload;
     },
-    themeToggled(state) {
-      state.theme = state.theme === "dark" ? "light" : "dark";
-    },
-    themeSet(state, action: PayloadAction<Theme>) {
-      state.theme = action.payload;
-    },
-    demoModeToggled(state) {
-      state.demoMode = !state.demoMode;
-    },
-    pauseToggled(state) {
-      state.paused = !state.paused;
+    extrasToggled(state) {
+      state.showExtras = !state.showExtras;
     },
     zonesToggled(state) {
       state.showZones = !state.showZones;
     },
+    mapQueryChanged(state, action: PayloadAction<string>) {
+      state.mapQuery = action.payload;
+    },
     driverFocused(state, action: PayloadAction<string | null>) {
       state.focusedDriverId = action.payload;
+    },
+    demoFeedToggled(state) {
+      state.demoFeed = !state.demoFeed;
+    },
+    pauseToggled(state) {
+      state.paused = !state.paused;
+    },
+    /** Esc: closes the top-most layer only. */
+    escaped(state) {
+      if (state.modal) state.modal = null;
+      else if (state.panel) state.panel = null;
+      else if (state.selectedJobId) state.selectedJobId = null;
     },
     toastShown(state, action: PayloadAction<{ tone: ToastTone; text: string }>) {
       state.toasts.push({ id: state.nextToastId, ...action.payload });
       state.nextToastId += 1;
-      if (state.toasts.length > 4) state.toasts.shift();
+      if (state.toasts.length > 3) state.toasts.shift();
     },
     toastDismissed(state, action: PayloadAction<number>) {
       state.toasts = state.toasts.filter((t) => t.id !== action.payload);
@@ -126,28 +141,31 @@ const uiSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(seeded, (state) => {
       state.selectedJobId = null;
-      state.drawer = null;
-      state.alertsReadAt = 0;
+      state.panel = null;
+      state.modal = null;
     });
   },
 });
 
 export const {
+  viewChanged,
   tabChanged,
   sortToggled,
   windowChanged,
   filterToggled,
-  gridQueryChanged,
+  zoneColsToggled,
+  sitesChanged,
   jobSelected,
-  drawerOpened,
-  drawerClosed,
-  shortcutsToggled,
-  themeToggled,
-  themeSet,
-  demoModeToggled,
-  pauseToggled,
+  panelToggled,
+  replyStarted,
+  modalOpened,
+  extrasToggled,
   zonesToggled,
+  mapQueryChanged,
   driverFocused,
+  demoFeedToggled,
+  pauseToggled,
+  escaped,
   toastShown,
   toastDismissed,
 } = uiSlice.actions;

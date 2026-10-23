@@ -2,91 +2,75 @@ import L from "leaflet";
 import { APP } from "@/config/app";
 import { DRIVER_STATUS, JOB_STATUS } from "@/config/status";
 import { formatFleetTime } from "@/lib/format";
+import type { DriverTrack } from "@/types/api";
 import type { Driver, Job, LatLng, Zone } from "@/types/domain";
-import type { Theme } from "@/store/slices/uiSlice";
 
-const TILES: Record<Theme, string> = {
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+export type BaseLayer = "map" | "satellite";
+
+const TILES: Record<BaseLayer, { url: string; attribution: string }> = {
+  map: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri",
+  },
 };
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
-const escapeHtml = (text: string): string =>
-  text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
-
-interface DriverMarker {
-  marker: L.Marker;
-  key: string;
-}
+const esc = (text: string): string => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const TRACK_COLOURS = ["#2563eb", "#dc3b3b", "#16a34a", "#9333ea", "#ea580c", "#0891b2"];
 
 /**
- * Owns the Leaflet map. React passes data in; this class diffs it onto map layers so a
- * 1 Hz position update moves markers without React rendering anything per driver.
+ * All Leaflet code lives here. React hands in data; this class diffs it onto layers, so a
+ * once-a-second position update moves markers without React rendering anything per car.
+ * Used by the dispatch map and the playback map.
  */
 export class MapController {
   private readonly map: L.Map;
   private tiles: L.TileLayer;
-  private readonly driverLayer = L.layerGroup();
-  private readonly zoneLayer = L.layerGroup();
-  private readonly pickupLayer = L.layerGroup();
-  private readonly routeLayer = L.layerGroup();
-  private readonly markers = new Map<string, DriverMarker>();
-  private readonly pickups = new Map<string, { marker: L.Marker; key: string }>();
+  private readonly layers = { zones: L.layerGroup(), route: L.layerGroup(), pickups: L.layerGroup(), drivers: L.layerGroup(), tracks: L.layerGroup() };
+  private readonly markers = new Map<string, { marker: L.Marker; key: string }>();
   private zonesKey = "";
 
-  constructor(container: HTMLElement, theme: Theme, onDriverClick: (id: string) => void, onPickupClick: (jobId: string) => void) {
-    this.map = L.map(container, {
-      center: [APP.mapCentre.lat, APP.mapCentre.lng],
-      zoom: APP.mapZoom,
-      zoomControl: false,
-      attributionControl: true,
-      preferCanvas: false,
-    });
+  constructor(container: HTMLElement, private readonly onDriverClick?: (id: string) => void) {
+    this.map = L.map(container, { center: [APP.mapCentre.lat, APP.mapCentre.lng], zoom: APP.mapZoom, zoomControl: false });
     this.map.attributionControl.setPrefix(false);
-    this.tiles = L.tileLayer(TILES[theme], { attribution: ATTRIBUTION, subdomains: "abcd", maxZoom: 19, detectRetina: true }).addTo(this.map);
-    this.zoneLayer.addTo(this.map);
-    this.routeLayer.addTo(this.map);
-    this.pickupLayer.addTo(this.map);
-    this.driverLayer.addTo(this.map);
-    this.onDriverClick = onDriverClick;
-    this.onPickupClick = onPickupClick;
+    this.tiles = this.makeTiles("map").addTo(this.map);
+    Object.values(this.layers).forEach((layer) => layer.addTo(this.map));
   }
 
-  private readonly onDriverClick: (id: string) => void;
-  private readonly onPickupClick: (jobId: string) => void;
+  private makeTiles(layer: BaseLayer): L.TileLayer {
+    return L.tileLayer(TILES[layer].url, { attribution: TILES[layer].attribution, subdomains: "abcd", maxZoom: 19 });
+  }
 
-  setTheme(theme: Theme): void {
+  setBaseLayer(layer: BaseLayer): void {
     this.tiles.remove();
-    this.tiles = L.tileLayer(TILES[theme], { attribution: ATTRIBUTION, subdomains: "abcd", maxZoom: 19, detectRetina: true }).addTo(this.map);
+    this.tiles = this.makeTiles(layer).addTo(this.map);
     this.tiles.bringToBack();
   }
 
-  syncDrivers(drivers: readonly Driver[], focusedId: string | null): void {
+  syncDrivers(drivers: readonly Driver[], focusedId: string | null = null): void {
     const seen = new Set<string>();
     for (const d of drivers) {
       seen.add(d.id);
       const tone = DRIVER_STATUS[d.status].tone;
-      const key = `${tone}|${d.id === focusedId ? 1 : 0}`;
+      const focused = d.id === focusedId;
+      const key = `${tone}|${focused}`;
       const existing = this.markers.get(d.id);
       if (existing) {
         existing.marker.setLatLng([d.lat, d.lng]);
         if (existing.key !== key) {
-          existing.marker.setIcon(this.driverIcon(d.callsign, tone, d.id === focusedId));
+          existing.marker.setIcon(this.chip(d.callsign, tone, focused)).setZIndexOffset(focused ? 1000 : 0);
           existing.key = key;
         }
-        existing.marker.setTooltipContent(this.driverTooltip(d));
-      } else {
-        const marker = L.marker([d.lat, d.lng], {
-          icon: this.driverIcon(d.callsign, tone, d.id === focusedId),
-          keyboard: false,
-          riseOnHover: true,
-        })
-          .bindTooltip(this.driverTooltip(d), { direction: "top", offset: [0, -12] })
-          .on("click", () => this.onDriverClick(d.id))
-          .addTo(this.driverLayer);
-        this.markers.set(d.id, { marker, key });
+        continue;
       }
-      this.markers.get(d.id)?.marker.setZIndexOffset(d.id === focusedId ? 1000 : 0);
+      const marker = L.marker([d.lat, d.lng], { icon: this.chip(d.callsign, tone, focused), keyboard: false })
+        .bindTooltip(() => `<b>${esc(d.callsign)}</b> ${esc(d.name)}<br>${esc(DRIVER_STATUS[d.status].label)}`, { direction: "top", offset: [0, -12] })
+        .on("click", () => this.onDriverClick?.(d.id))
+        .addTo(this.layers.drivers);
+      this.markers.set(d.id, { marker, key });
     }
     for (const [id, m] of this.markers) {
       if (!seen.has(id)) {
@@ -96,90 +80,72 @@ export class MapController {
     }
   }
 
-  /** Waiting jobs show as pickup pins so the dispatcher sees demand against supply. */
-  syncPickups(jobs: readonly Job[], now: number): void {
-    const seen = new Set<string>();
+  /** Waiting jobs as pickup diamonds, so demand shows against supply. */
+  syncPickups(jobs: readonly Job[]): void {
+    this.layers.pickups.clearLayers();
     for (const job of jobs) {
-      seen.add(job.id);
-      const overdue = job.pickupAt < now;
-      const tone = JOB_STATUS[job.status].tone;
-      const key = `${tone}|${overdue ? 1 : 0}`;
-      const existing = this.pickups.get(job.id);
-      if (existing && existing.key === key) continue;
-      existing?.marker.remove();
-      const marker = L.marker([job.pickup.lat, job.pickup.lng], {
-        icon: L.divIcon({
-          className: "pickup-pin",
-          html: `<span class="pin${overdue ? " is-overdue" : ""}" data-tone="${tone}"></span>`,
-          iconSize: [0, 0],
-        }),
-        keyboard: false,
-      })
-        .bindTooltip(
-          `Job ${job.number}, ${escapeHtml(JOB_STATUS[job.status].label.toLowerCase())}<br>${escapeHtml(job.pickup.label)} at ${formatFleetTime(job.pickupAt)}`,
-          { direction: "top", offset: [0, -10] },
-        )
-        .on("click", () => this.onPickupClick(job.id))
-        .addTo(this.pickupLayer);
-      this.pickups.set(job.id, { marker, key });
-    }
-    for (const [id, p] of this.pickups) {
-      if (!seen.has(id)) {
-        p.marker.remove();
-        this.pickups.delete(id);
-      }
+      L.circleMarker([job.pickup.lat, job.pickup.lng], { radius: 7, color: "#fff", weight: 2, fillColor: "#ef8a17", fillOpacity: 1 })
+        .bindTooltip(`${formatFleetTime(job.pickupAt)} ${esc(JOB_STATUS[job.status].label)}<br>${esc(job.pickup.label)}`, { direction: "top" })
+        .addTo(this.layers.pickups);
     }
   }
 
-  syncZones(zones: readonly Zone[], visible: boolean): void {
-    const key = `${visible}|${zones.map((z) => `${z.id}${z.surge ? "s" : ""}${z.fullyBooked ? "f" : ""}`).join()}`;
+  syncZones(zones: readonly Zone[], visible: boolean, labels = false): void {
+    const key = `${visible}|${labels}|${zones.map((z) => `${z.id}${z.surge ? 1 : 0}${z.fullyBooked ? 1 : 0}`).join()}`;
     if (key === this.zonesKey) return;
     this.zonesKey = key;
-    this.zoneLayer.clearLayers();
+    this.layers.zones.clearLayers();
     if (!visible) return;
-    const style = getComputedStyle(document.documentElement);
-    const line = style.getPropertyValue("--line-strong").trim();
-    const hot = style.getPropertyValue("--tone-bidding").trim();
     for (const z of zones) {
       const flagged = z.surge || z.fullyBooked;
-      L.circle([z.lat, z.lng], {
-        radius: z.radiusM,
-        color: flagged ? hot : line,
-        weight: flagged ? 1.5 : 1,
-        dashArray: flagged ? undefined : "4 4",
-        fillColor: flagged ? hot : line,
-        fillOpacity: flagged ? 0.1 : 0.03,
-        interactive: false,
-      }).addTo(this.zoneLayer);
+      L.circle([z.lat, z.lng], { radius: z.radiusM, color: flagged ? "#ef8a17" : "#4b5a73", weight: 1.5, fillOpacity: flagged ? 0.15 : 0.06, interactive: false }).addTo(this.layers.zones);
+      if (labels) L.marker([z.lat, z.lng], { icon: L.divIcon({ className: "", html: `<span class="zone-label">${esc(z.name.toUpperCase())}</span>`, iconSize: [0, 0] }), interactive: false }).addTo(this.layers.zones);
     }
   }
 
-  /** Draws the selected job: driver to pickup (solid), pickup through vias to drop-off (dashed). */
+  /** Selected job: car to pickup solid, pickup to drop-off dashed. */
   showRoute(job: Job | null, driver: Driver | null): void {
-    this.routeLayer.clearLayers();
+    this.layers.route.clearLayers();
     if (!job) return;
-    const style = getComputedStyle(document.documentElement);
-    const accent = style.getPropertyValue("--meter").trim();
-    const blue = style.getPropertyValue("--tone-enroute").trim();
-    const points: L.LatLngExpression[] = [job.pickup, ...job.vias, ...(job.dropoff ? [job.dropoff] : [])].map((p) => [p.lat, p.lng]);
-    if (points.length > 1) L.polyline(points, { color: accent, weight: 3, dashArray: "6 6", opacity: 0.9 }).addTo(this.routeLayer);
-    if (driver) L.polyline([[driver.lat, driver.lng], [job.pickup.lat, job.pickup.lng]], { color: blue, weight: 3, opacity: 0.85 }).addTo(this.routeLayer);
-    if (job.dropoff) L.circleMarker([job.dropoff.lat, job.dropoff.lng], { radius: 6, color: accent, weight: 2, fillColor: accent, fillOpacity: 1 }).addTo(this.routeLayer);
-    this.map.flyToBounds(L.latLngBounds([...points, ...(driver ? [[driver.lat, driver.lng] as L.LatLngTuple] : [])]), { padding: [40, 40], maxZoom: 14, duration: 0.6 });
+    const stops: L.LatLngTuple[] = [job.pickup, ...job.vias, ...(job.dropoff ? [job.dropoff] : [])].map((p) => [p.lat, p.lng]);
+    if (stops.length > 1) L.polyline(stops, { color: "#2563eb", weight: 4, dashArray: "8 6" }).addTo(this.layers.route);
+    if (driver) L.polyline([[driver.lat, driver.lng], [job.pickup.lat, job.pickup.lng]], { color: "#16a34a", weight: 4 }).addTo(this.layers.route);
+    stops.forEach((p, i) => L.circleMarker(p, { radius: 6, color: "#fff", weight: 2, fillColor: i === 0 ? "#16a34a" : "#2563eb", fillOpacity: 1 }).addTo(this.layers.route));
+    const all = driver ? [...stops, [driver.lat, driver.lng] as L.LatLngTuple] : stops;
+    this.map.flyToBounds(L.latLngBounds(all), { padding: [50, 50], maxZoom: 15, duration: 0.5 });
   }
 
-  flyTo(point: LatLng, zoom = 14): void {
-    this.map.flyTo([point.lat, point.lng], Math.max(zoom, this.map.getZoom()), { duration: 0.6 });
+  showTracks(tracks: readonly DriverTrack[]): void {
+    this.layers.tracks.clearLayers();
+    tracks.forEach((t, i) => {
+      const colour = TRACK_COLOURS[i % TRACK_COLOURS.length] ?? "#2563eb";
+      const line = t.points.map((p) => [p.lat, p.lng] as L.LatLngTuple);
+      L.polyline(line, { color: colour, weight: 3 }).bindTooltip(t.callsign).addTo(this.layers.tracks);
+      const last = line[line.length - 1];
+      if (last) L.marker(last, { icon: this.chip(t.callsign, "enroute", false), keyboard: false }).addTo(this.layers.tracks);
+    });
   }
 
-  fitAll(): void {
-    const pts = [...this.markers.values()].map((m) => m.marker.getLatLng());
-    if (pts.length) this.map.flyToBounds(L.latLngBounds(pts), { padding: [30, 30], duration: 0.6 });
+  flyTo(point: LatLng, zoom = 15): void {
+    this.map.flyTo([point.lat, point.lng], Math.max(zoom, this.map.getZoom()), { duration: 0.5 });
+  }
+
+  fitDrivers(): void {
+    const points = [...this.markers.values()].map((m) => m.marker.getLatLng());
+    if (points.length) this.map.flyToBounds(L.latLngBounds(points), { padding: [30, 30], duration: 0.5 });
+  }
+
+  setView(centre: LatLng, zoom: number): void {
+    this.map.setView([centre.lat, centre.lng], zoom);
   }
 
   zoom(delta: 1 | -1): void {
     if (delta > 0) this.map.zoomIn();
     else this.map.zoomOut();
+  }
+
+  onClick(handler: (point: LatLng) => void): void {
+    this.map.on("click", (e: L.LeafletMouseEvent) => handler({ lat: e.latlng.lat, lng: e.latlng.lng }));
   }
 
   invalidateSize(): void {
@@ -189,18 +155,9 @@ export class MapController {
   destroy(): void {
     this.map.remove();
     this.markers.clear();
-    this.pickups.clear();
   }
 
-  private driverIcon(callsign: string, tone: string, focused: boolean): L.DivIcon {
-    return L.divIcon({
-      className: "driver-marker",
-      html: `<span class="chip${focused ? " is-focused" : ""}" data-tone="${tone}">${escapeHtml(callsign)}</span>`,
-      iconSize: [0, 0],
-    });
-  }
-
-  private driverTooltip(d: Driver): string {
-    return `<b>${escapeHtml(d.callsign)}</b> ${escapeHtml(d.name)}<br>${escapeHtml(DRIVER_STATUS[d.status].label)}, ${escapeHtml(d.vehicle.toLowerCase())}`;
+  private chip(callsign: string, tone: string, focused: boolean): L.DivIcon {
+    return L.divIcon({ className: "drv", html: `<span class="drv-chip${focused ? " is-focused" : ""}" data-tone="${tone}">${esc(callsign)}</span>`, iconSize: [0, 0] });
   }
 }

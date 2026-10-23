@@ -1,0 +1,62 @@
+/* ---------- Via stops ---------- */
+.via {
+  display: grid;
+  grid-template-columns: 30px 40px 88px 140px minmax(200px, 2fr) minmax(200px, 2fr) 110px 110px 100px 140px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+}
+.viaHead {
+  composes: via;
+  padding: 7px 8px;
+  background: var(--card-head);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--label);
+  text-transform: uppercase;
+}
+.viaRow {
+  composes: via;
+  border-bottom: 1px solid var(--line);
+}
+.num {
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.actions {
+  display: flex;
+  gap: 3px;
+}
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 8px;
+}
+
+/* ---------- Booking options ---------- */
+.options {
+  display: grid;
+  grid-template-columns: 240px 220px 1fr;
+}
+.options > * {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+}
+.optLabel {
+  font-family: var(--font-label);
+  font-weight: 700;
+  color: var(--label);
+  text-transform: uppercase;
+}
+.optHint {
+  color: var(--text-2);
+}
+.optToggle {
+  width: 180px;
+  justify-content: flex-start;
+}

@@ -1,12 +1,18 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { APP } from "@/config/app";
 import { stopText } from "@/lib/stops";
-import type { Stop, TariffId, VehicleType } from "@/types/domain";
+import type { BookingOptions, Stop, TariffId, VehicleType } from "@/types/domain";
+
+export interface ViaDraft {
+  text: string;
+  stop: Stop | null;
+  name: string;
+  phone: string;
+  notes: string;
+}
 
 export interface BookingForm {
-  /** Empty string means today. */
   date: string;
-  /** Empty string means as soon as possible. */
   time: string;
   phone: string;
   priority: string;
@@ -14,7 +20,7 @@ export interface BookingForm {
   pickup: Stop | null;
   dropoffText: string;
   dropoff: Stop | null;
-  vias: Stop[];
+  vias: ViaDraft[];
   name: string;
   email: string;
   instructions: string;
@@ -26,25 +32,32 @@ export interface BookingForm {
   vehicle: VehicleType;
   extras: string;
   leadMin: string;
-  /** Text in the fare box. Empty means "use the selected tariff". */
+  site: string;
   fareText: string;
   tariff: TariffId;
   customerId: string | null;
+  altPhone: string;
+  customerNotes: string;
+  operatorNotes: string;
+  excludeDrivers: string;
+  options: BookingOptions;
 }
 
-/** Keys whose value is exactly `string` (not a narrower union such as VehicleType). */
+/** Keys whose value is exactly `string`, i.e. fields edited with a plain text input. */
 type PlainStringKeys<T> = { [K in keyof T]-?: string extends T[K] ? (T[K] extends string ? K : never) : never }[keyof T];
-
-/** Fields edited as plain text inputs. */
 export type TextField = PlainStringKeys<BookingForm>;
-
 export type BookingErrors = Partial<Record<keyof BookingForm, string>>;
+export type StopTarget = "pickup" | "dropoff" | number;
+
+export const MAX_VIAS = 4;
+
+export const emptyVia = (): ViaDraft => ({ text: "", stop: null, name: "", phone: "", notes: "" });
 
 export const emptyForm = (): BookingForm => ({
   date: "",
   time: "",
   phone: "",
-  priority: "5",
+  priority: "",
   pickupText: "",
   pickup: null,
   dropoffText: "",
@@ -56,26 +69,30 @@ export const emptyForm = (): BookingForm => ({
   driverCallsign: "",
   account: "",
   pin: "",
-  passengers: "1",
-  taxis: "1",
+  passengers: "",
+  taxis: "",
   vehicle: "SALOON",
   extras: "",
-  leadMin: String(APP.defaultLeadMin),
+  leadMin: "",
+  site: "",
   fareText: "",
   tariff: "standard",
   customerId: null,
+  altPhone: "",
+  customerNotes: "",
+  operatorNotes: "",
+  excludeDrivers: "",
+  options: { sendSms: true, sendRingback: true, autoComplete: false },
 });
 
 interface BookingState {
   form: BookingForm;
   errors: BookingErrors;
-  /** Bumped on reset so inputs can re-focus the phone field. */
+  /** Bumped on reset so the form can put focus back on the phone field. */
   resetCount: number;
 }
 
 const initialState: BookingState = { form: emptyForm(), errors: {}, resetCount: 0 };
-
-type StopField = "pickup" | "dropoff";
 
 const bookingSlice = createSlice({
   name: "booking",
@@ -91,24 +108,40 @@ const bookingSlice = createSlice({
     vehicleChanged(state, action: PayloadAction<VehicleType>) {
       state.form.vehicle = action.payload;
     },
-    stopSelected(state, action: PayloadAction<{ field: StopField; stop: Stop }>) {
-      const { field, stop } = action.payload;
-      state.form[field] = stop;
-      state.form[field === "pickup" ? "pickupText" : "dropoffText"] = stopText(stop);
-      delete state.errors[field === "pickup" ? "pickupText" : "dropoffText"];
+    optionsChanged(state, action: PayloadAction<BookingOptions>) {
+      state.form.options = action.payload;
+    },
+    stopSelected(state, action: PayloadAction<{ target: StopTarget; stop: Stop }>) {
+      const { target, stop } = action.payload;
+      if (typeof target === "number") {
+        const via = state.form.vias[target];
+        if (via) Object.assign(via, { stop, text: stopText(stop) });
+        return;
+      }
+      state.form[target] = stop;
+      state.form[target === "pickup" ? "pickupText" : "dropoffText"] = stopText(stop);
+      delete state.errors[target === "pickup" ? "pickupText" : "dropoffText"];
     },
     stopsSwapped(state) {
       const { pickup, pickupText, dropoff, dropoffText } = state.form;
-      state.form.pickup = dropoff;
-      state.form.pickupText = dropoffText;
-      state.form.dropoff = pickup;
-      state.form.dropoffText = pickupText;
+      Object.assign(state.form, { pickup: dropoff, pickupText: dropoffText, dropoff: pickup, dropoffText: pickupText });
     },
-    viaAdded(state, action: PayloadAction<Stop>) {
-      state.form.vias.push(action.payload);
+    viaChanged(state, action: PayloadAction<{ index: number; patch: Partial<ViaDraft> }>) {
+      const { index, patch } = action.payload;
+      while (state.form.vias.length <= index && state.form.vias.length < MAX_VIAS) state.form.vias.push(emptyVia());
+      const via = state.form.vias[index];
+      if (!via) return;
+      Object.assign(via, patch);
+      if ("text" in patch) via.stop = null;
+    },
+    viaAdded(state) {
+      if (state.form.vias.length < MAX_VIAS) state.form.vias.push(emptyVia());
     },
     viaRemoved(state, action: PayloadAction<number>) {
       state.form.vias.splice(action.payload, 1);
+    },
+    viasReplaced(state, action: PayloadAction<ViaDraft[]>) {
+      state.form.vias = action.payload.slice(0, MAX_VIAS);
     },
     tariffSelected(state, action: PayloadAction<TariffId>) {
       state.form.tariff = action.payload;
@@ -132,8 +165,8 @@ const bookingSlice = createSlice({
       state.errors = {};
       state.resetCount += 1;
     },
-    formLoaded(state, action: PayloadAction<BookingForm>) {
-      state.form = action.payload;
+    formLoaded(state, action: PayloadAction<Partial<BookingForm>>) {
+      state.form = { ...emptyForm(), ...action.payload };
       state.errors = {};
     },
   },
@@ -142,10 +175,13 @@ const bookingSlice = createSlice({
 export const {
   fieldChanged,
   vehicleChanged,
+  optionsChanged,
   stopSelected,
   stopsSwapped,
+  viaChanged,
   viaAdded,
   viaRemoved,
+  viasReplaced,
   tariffSelected,
   callerMatched,
   callerCleared,
@@ -154,3 +190,6 @@ export const {
   formLoaded,
 } = bookingSlice.actions;
 export default bookingSlice.reducer;
+
+/** Defaults applied at save time, so empty inputs keep showing their placeholder hints. */
+export const FORM_DEFAULTS = { passengers: 1, taxis: 1, priority: 5, leadMin: APP.defaultLeadMin } as const;

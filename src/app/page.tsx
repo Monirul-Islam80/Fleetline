@@ -1,5 +1,5 @@
-import { ConsoleApp } from "@/components/console/ConsoleApp";
+import { OperatorConsole } from "@/components/shell/OperatorConsole";
 
 export default function Page() {
-  return <ConsoleApp />;
+  return <OperatorConsole />;
 }

@@ -1,32 +1,27 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { APP } from "@/config/app";
+import { StoreProvider } from "@/components/app/StoreProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: `${APP.product} dispatch console`,
-  description: "Keyboard-first dispatch console for private hire fleets",
+  title: `${APP.fleetName} - ${APP.product}`,
+  description: "Dispatch console",
   robots: { index: false, follow: false },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#0b1424",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en-GB" data-theme="dark" suppressHydrationWarning>
+    <html lang="en-GB">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router root layout applies to every page */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap"
-        />
-        <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- the root layout covers every page */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" />
       </head>
-      <body>{children}</body>
+      <body>
+        <StoreProvider>{children}</StoreProvider>
+      </body>
     </html>
   );
 }

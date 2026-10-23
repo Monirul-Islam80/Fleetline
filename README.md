@@ -1,90 +1,78 @@
 # Fleetline dispatch console (UI phase)
 
-Keyboard-first dispatch console for UK private hire fleets. This phase is the front end only.
-All data is placeholder: a seeded dataset and a client-side simulator stand in for the backend.
+Same screen layout, wording and keyboard keys as the console Western Cars uses today, with a new
+colour system. Runs on placeholder data until the backend is connected.
 
 ## Run
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
-npm run typecheck  # tsc, strict mode
-npm run lint
-npm run build && npm start
+npm run dev          # http://localhost:3000
+npm run typecheck && npm run lint && npm run build
 ```
 
-Node 20.9 or newer. Map tiles (CARTO) and the Barlow font load from the internet at runtime.
+Pages: `/` operator console (Dispatch, Bookings, Drivers, Logs), `/wallboard`, `/parking`, `/playback`.
+The header icons open the last three in a new tab, as today.
 
 ## Stack
 
-| Concern | Choice | Why |
-| --- | --- | --- |
-| Framework | Next.js 16 (App Router), React 19, TypeScript strict | As requested |
-| State | Redux Toolkit + react-redux | One store for jobs, drivers, form, UI |
-| Shortcuts | react-hotkeys-hook | F-keys work inside inputs |
-| Map | Leaflet (no React wrapper) | Imperative marker diffing, no re-render per car |
-| Styling | CSS Modules + CSS custom properties | Zero runtime, no UI library |
-| Table | Own 40-line virtualizer (`useVirtualRows`) | Thousands of rows, no table library |
+Next.js 16 (App Router), React 19, TypeScript strict, Redux Toolkit, react-hotkeys-hook, Leaflet.
+No UI library: CSS Modules + CSS variables (`src/app/globals.css`). One table component, one form-config
+component, one modal, one floating panel; every screen is built from those.
 
-Runtime dependencies: next, react, react-dom, @reduxjs/toolkit, react-redux, react-hotkeys-hook, leaflet. Nothing else.
+## Connecting the backend (the part to read)
 
-## Structure
+Everything the UI asks of the server goes through **one interface**: `src/api/client.ts`.
 
-```
-src/
-  app/                  layout, page, global tokens (globals.css)
-  config/               app + simulator settings, status language, keymap
-  types/domain.ts       Job, Driver, Stop, Zone... (mirrors the planned Postgres schema)
-  lib/                  pure helpers: geo, fare, time (fleet time zone), format, focus registry
-  mock/                 places, zones, seeded customers/drivers/jobs (invented data only)
-  store/
-    slices/             jobs, fleet (drivers, zones, clock), booking, ui, comms
-    selectors.ts        tab buckets, sorting, nearest driver, quotes (all memoized)
-    thunks/             booking, job actions, simulation   <- replace with API calls
-  hooks/                useSimulation, useConsoleHotkeys, useVirtualRows
-  components/
-    ui/                 primitives: Button, TextField, pills, chips, Icon set
-    layout/             TopBar, Clock
-    booking/            BookingPanel, BookingInput (Redux-bound input), AddressField (combobox)
-    helper/             nearest car, fare meter, driver queues
-    map/                MapPanel + MapController (all Leaflet code lives here)
-    jobs/               JobsPanel, JobGrid, columns.tsx (single column definition)
-    overlays/           Drawer (job + counter views), ShortcutSheet, Toasts
-```
-
-## Where the backend plugs in
-
-| Today (placeholder) | Replace with |
+| File | What it is |
 | --- | --- |
-| `thunks/simulation.ts` `simulationTick` | Socket subscription that dispatches the same `simulationApplied` action |
-| `thunks/booking.ts` `saveBooking` | `POST /jobs`, keep the client validation |
-| `thunks/booking.ts` `lookupCaller` | `GET /customers/lookup?phone=` |
-| `AddressField` `searchPlaces` | `GET /places/search?q=` (Google Places or Ideal Postcodes) |
-| `thunks/jobActions.ts` | `POST /jobs/:id/{pause,resume,assign,cancel,noshow}` |
-| `slices/commsSlice.ts` | Telephony and chat counters from the realtime channel |
-| `lib/fare.ts` | Server fare engine (keep the client copy for instant quotes) |
+| `src/api/client.ts` | `ApiClient`: every call (create job, job actions, searches, messages, playback...) |
+| `src/api/live.ts` | The REST contract: one line per endpoint. Implement these on the server |
+| `src/api/mock.ts` | Same interface answered from seed data in the browser |
+| `src/api/realtime.ts` | Live feed. `live` = WebSocket; `mock` = the in-browser engine |
+| `src/api/mockEngine.ts` | Placeholder dispatch engine (offers, drivers moving). Delete when live |
+| `src/types/api.ts` | Request/response shapes, `Snapshot` (initial load) |
+| `src/store/actions.ts` | `RealtimeBatch`: the one message shape the socket must send |
 
-The `simulationApplied` action is the realtime contract: one batched message per tick with job
-updates, driver updates and events. Keep that shape and the UI does not change.
+Switch with env vars:
 
-## Keyboard
+```
+NEXT_PUBLIC_API_MODE=live
+NEXT_PUBLIC_API_URL=https://api.example.com
+NEXT_PUBLIC_WS_URL=wss://api.example.com/realtime
+```
 
-All keys live in `src/config/keymap.ts`; the handlers, placeholder hints and the `?` sheet read
-from it. F1 save, F2 pickup, F2 F2 destination, F4 name, F4 F4 phone, F6 search, F8 clear,
-F10 via, Alt+1/2/3 tariff, Esc close. Enter never saves, by design.
+Rules that keep it simple:
+- Components never call `fetch`. Writes are thunks in `src/store/thunks/*` (call API, then update the store).
+  Reads use `useApi((api) => api.searchX(query))`, which tracks loading and errors.
+- The store is `jobs`, `fleet` (drivers, zones, customers), `booking` (the form), `inbox` (counter panels), `ui`.
+- Backend endpoints needed: `GET /snapshot`, `POST /jobs`, `POST /jobs/:id/{pause|resume|redispatch|cancel|noshow|assign}`,
+  `GET /customers/lookup`, `GET /places`, `GET /bookings`, `GET /drivers`, `GET /logs`, `POST /staff-messages`,
+  `POST /driver-messages`, `POST /driver-chats/:id/{take|done}`, `POST /call-queue/:id/take`, `DELETE /alerts/:id`,
+  `DELETE /flights/:id`, `POST /zones/clear-flags`, `GET /playback`, plus the WebSocket.
 
-## Design decisions
+## Where things are
 
-- Status colours follow UK road-sign logic (go green, motorway blue, warning amber, stop red)
-  and are shared by grid, map, legend and drawer through `config/status.ts`.
-- Amber is reserved for the fare meter, computed values and the Save action.
-- Status is always colour plus text, never colour alone.
-- Phone numbers are masked in the grid; the full number shows only in the job panel.
-- Typed times are read as UK fleet time, so an operator in another time zone books correctly.
-- Desktop only: 1280 px minimum, tuned for 1366 x 768 and 1920 x 1080.
+```
+src/config/      app settings, sites, status colours, keymap (all keys in one table)
+src/components/
+  ui/            Button, Toggle, Input, Select, DataTable, Modal, FloatPanel, Calendar, Icon
+  shell/         header rows and the operator console frame
+  dispatch/      booking form, driver lists + fare, map, extra fields, waiting times, job grid, via + options modals
+  panels/        staff messages, call queue, driver chat, driver message, alerts, flights, zones, sites, settings
+  views/         Bookings, Drivers, Logs (search forms are config in QueryForm)
+  pages/         Wallboard, Parking, Playback
+```
 
-## Demo controls
+## Keys
 
-Top right of the second bar: **Feed** adds an app booking every 25 s, **Pause** freezes the
-simulation, **Reset** reloads the seed. Seed data is invented; phone numbers use Ofcom's
-drama range (07700 900xxx).
+F1 save, F2 / double F2 pickup / destination, F4 / double F4 name / phone, F6 booking search, F8 clear,
+F10 via stops, Alt+L lead time, Alt+R recurring, Alt+D/W/E tariffs, Esc closes the top panel.
+Right-click a job row for actions (allocate, pause, resume, re-dispatch, copy, no show, cancel).
+
+## Placeholders to know about
+
+- Demo data is invented (07700 900xxx phone numbers). Settings (wrench icon) can pause, stop the app
+  booking feed, or reset.
+- Wallboard averages (dispatch, pickup, POB time) and "last week" are placeholders for a reports endpoint.
+- Map tiles: CARTO (map) and Esri (satellite) free tiles; get a commercial key before production.

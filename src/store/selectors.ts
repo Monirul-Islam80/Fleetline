@@ -1,10 +1,9 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { DISPATCHABLE, UNASSIGNED, type JobTab } from "@/config/status";
 import { quoteFares, routeMiles } from "@/lib/fare";
-import { digitsOnly } from "@/lib/format";
 import { etaMinutes, roadMiles } from "@/lib/geo";
-import { placeById } from "@/mock/geography";
 import { toStop } from "@/lib/stops";
+import { placeById, zoneName } from "@/mock/geography";
 import type { Driver, FareQuote, Job, LatLng, Stop } from "@/types/domain";
 import type { RootState } from "./index";
 import { driversAdapter } from "./slices/fleetSlice";
@@ -15,151 +14,90 @@ const jobSelectors = jobsAdapter.getSelectors((s: RootState) => s.jobs);
 const driverSelectors = driversAdapter.getSelectors((s: RootState) => s.fleet.drivers);
 
 export const selectAllJobs = jobSelectors.selectAll;
-export const selectJobById = jobSelectors.selectById;
 export const selectAllDrivers = driverSelectors.selectAll;
 export const selectDriverEntities = driverSelectors.selectEntities;
-export const selectDriverById = driverSelectors.selectById;
-export const selectNow = (s: RootState) => s.fleet.now;
 export const selectZones = (s: RootState) => s.fleet.zones;
 export const selectCustomers = (s: RootState) => s.fleet.customers;
-export const selectForm = (s: RootState) => s.booking.form;
-export const selectUi = (s: RootState) => s.ui;
 
-/** Rounds the clock to the minute so tab buckets do not recompute on every 1 s tick. */
-const selectNowMinute = (s: RootState) => Math.floor(s.fleet.now / 60_000) * 60_000;
+/** The clock rounded to the minute, so lists that only show minutes do not recompute every second. */
+export const selectNowMinute = (s: RootState) => Math.floor(s.fleet.now / 60_000) * 60_000;
 
-const DISPATCH_STATES = new Set(["NEW", "PAUSED", "BIDDING", "ENROUTE", "ARRIVED", "POB", "DROPPINGOFF"]);
+const LIVE = new Set(["NEW", "PAUSED", "BIDDING", "ENROUTE", "ARRIVED", "POB", "DROPPINGOFF"]);
 
 function tabOf(job: Job, now: number, windowMs: number): JobTab | null {
-  if (DISPATCH_STATES.has(job.status)) return "dispatch";
-  switch (job.status) {
-    case "BOOKED":
-      return job.pickupAt <= now + windowMs ? "prebooked" : "booked";
-    case "COMPLETED":
-      return "completed";
-    case "CANCELLED":
-      return "cancelled";
-    case "NOSHOW":
-      return "noshow";
-    default:
-      return null;
-  }
+  if (LIVE.has(job.status)) return "dispatch";
+  if (job.status === "BOOKED") return job.pickupAt <= now + windowMs ? "prebooked" : "booked";
+  if (job.status === "COMPLETED") return "completed";
+  if (job.status === "CANCELLED") return "cancelled";
+  if (job.status === "NOSHOW") return "noshow";
+  return null;
 }
 
 export type TabBuckets = Record<JobTab, Job[]>;
 
-/** Every job sorted into its tab in a single pass. Counts and grid rows both read from this. */
+/** Every job sorted into its tab in one pass. Tab counts and grid rows both read from this. */
 export const selectTabBuckets = createSelector(
-  [selectAllJobs, selectNowMinute, (s: RootState) => s.ui.windowHours],
-  (jobs, now, windowHours): TabBuckets => {
-    const buckets: TabBuckets = {
-      dispatch: [],
-      prebooked: [],
-      booked: [],
-      completed: [],
-      cancelled: [],
-      noshow: [],
-      network: [],
-      flights: [],
-    };
-    const windowMs = windowHours * 3_600_000;
+  [selectAllJobs, selectNowMinute, (s: RootState) => s.ui.windowHours, (s: RootState) => s.ui.siteIds],
+  (jobs, now, windowHours, siteIds): TabBuckets => {
+    const buckets: TabBuckets = { dispatch: [], prebooked: [], booked: [], completed: [], cancelled: [], noshow: [], network: [], flights: [] };
+    const sites = new Set(siteIds);
     for (const job of jobs) {
-      const tab = tabOf(job, now, windowMs);
+      if (!sites.has(job.siteId)) continue;
+      const tab = tabOf(job, now, windowHours * 3_600_000);
       if (tab) buckets[tab].push(job);
-      if (job.flightNo && (tab === "prebooked" || tab === "booked" || tab === "dispatch")) buckets.flights.push(job);
     }
     return buckets;
   },
 );
 
-export const selectTabCounts = createSelector([selectTabBuckets], (b) =>
-  Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v.length])) as Record<JobTab, number>,
-);
+export const selectTabCounts = createSelector([selectTabBuckets, (s: RootState) => s.inbox.flights.length], (b, flights) => {
+  const counts = Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v.length])) as Record<JobTab, number>;
+  return { ...counts, flights };
+});
 
-const sortValue = (job: Job, key: SortKey, drivers: Record<string, Driver | undefined>): string | number => {
-  switch (key) {
-    case "time":
-      return job.pickupAt;
-    case "status":
-      return job.status;
-    case "driver":
-      return job.driverId ? (drivers[job.driverId]?.callsign ?? "") : "";
-    case "pickup":
-      return job.pickup.label;
-    case "dropoff":
-      return job.dropoff?.label ?? "";
-    case "name":
-      return job.customerName;
-    case "fare":
-      return job.fare ?? 0;
-    case "zone":
-      return job.pickup.zoneId ?? "";
-    case "priority":
-      return job.priority;
-  }
+const SORT_VALUE: Record<SortKey, (job: Job) => string | number> = {
+  time: (j) => j.pickupAt,
+  priority: (j) => j.priority,
+  status: (j) => j.status,
+  pickup: (j) => j.pickup.label,
+  dropoff: (j) => j.dropoff?.label ?? "",
+  name: (j) => j.customerName,
+  zone: (j) => zoneName(j.pickup.zoneId),
 };
 
-function matchesQuery(job: Job, q: string, drivers: Record<string, Driver | undefined>): boolean {
-  if (!q) return true;
-  const callsign = job.driverId ? drivers[job.driverId]?.callsign : undefined;
-  const qDigits = digitsOnly(q);
-  return (
-    String(job.number).includes(q) ||
-    job.customerName.toLowerCase().includes(q) ||
-    job.pickup.label.toLowerCase().includes(q) ||
-    job.pickup.area.toLowerCase().includes(q) ||
-    (job.dropoff?.label.toLowerCase().includes(q) ?? false) ||
-    (callsign?.includes(q) ?? false) ||
-    (qDigits.length >= 3 && digitsOnly(job.phone).includes(qDigits))
-  );
-}
-
-/** Rows for the visible tab after filters, search and sort. */
-export const selectVisibleJobs = createSelector(
-  [selectTabBuckets, selectDriverEntities, (s: RootState) => s.ui],
-  (buckets, drivers, ui): Job[] => {
-    const q = ui.gridQuery.trim().toLowerCase();
-    const { recurring, flights, accounts } = ui.filters;
-    const rows = buckets[ui.tab].filter(
-      (j) =>
-        (recurring || !j.isRecurring) &&
-        (flights || !j.flightNo) &&
-        (accounts || !j.accountCode) &&
-        matchesQuery(j, q, drivers),
-    );
-    const dir = ui.sort.dir === "asc" ? 1 : -1;
-    // Completed work reads newest first by default.
-    const timeDir = ui.sort.key === "time" && (ui.tab === "completed" || ui.tab === "cancelled" || ui.tab === "noshow") ? -dir : dir;
-    return rows.sort((a, b) => {
-      const va = sortValue(a, ui.sort.key, drivers);
-      const vb = sortValue(b, ui.sort.key, drivers);
-      if (va === vb) return a.number - b.number;
-      return (va < vb ? -1 : 1) * (ui.sort.key === "time" ? timeDir : dir);
-    });
-  },
-);
+/** Grid rows for the open tab after the toolbar filters and sort. */
+export const selectVisibleJobs = createSelector([selectTabBuckets, (s: RootState) => s.ui], (buckets, ui): Job[] => {
+  const { recurring } = ui.filters;
+  const rows = buckets[ui.tab].filter((j) => recurring || !j.isRecurring);
+  const value = SORT_VALUE[ui.sort.key];
+  const dir = ui.sort.dir === "asc" ? 1 : -1;
+  return rows.sort((a, b) => {
+    const va = value(a);
+    const vb = value(b);
+    return va === vb ? a.number - b.number : (va < vb ? -1 : 1) * dir;
+  });
+});
 
 export const isOverdue = (job: Job, now: number): boolean => UNASSIGNED.has(job.status) && job.pickupAt < now;
 
-export const selectDriverLists = createSelector([selectAllDrivers, selectNowMinute], (drivers) => {
-  const parked = drivers.filter((d) => d.status === "PARKED").sort((a, b) => a.statusSince - b.statusSince);
-  const dropping = drivers.filter((d) => d.status === "DROPPING" || d.status === "POB");
-  const available = drivers.filter((d) => d.status === "AVAILABLE");
-  const away = drivers.filter((d) => d.status === "AWAY");
-  return { parked, dropping, available, away };
-});
+export const selectDriverLists = createSelector([selectAllDrivers], (drivers) => ({
+  parked: drivers.filter((d) => d.status === "PARKED").sort((a, b) => a.statusSince - b.statusSince),
+  dropping: drivers.filter((d) => d.status === "DROPPING"),
+  bidding: drivers.filter((d) => d.status === "AVAILABLE"),
+  away: drivers.filter((d) => d.status === "AWAY"),
+  online: drivers.filter((d) => d.status !== "AWAY"),
+}));
 
-export const selectFleetStats = createSelector([selectAllDrivers], (drivers) => {
-  let free = 0;
-  let busy = 0;
-  let away = 0;
-  for (const d of drivers) {
-    if (DISPATCHABLE.has(d.status)) free += 1;
-    else if (d.status === "AWAY") away += 1;
-    else busy += 1;
-  }
-  return { free, busy, away, total: drivers.length };
-});
+/** Parked drivers, longest wait first: the "Plot Waiting Times" panel. */
+export const selectWaitingTimes = createSelector([selectDriverLists], (lists) => [...lists.parked].sort((a, b) => a.statusSince - b.statusSince));
+
+/** Drivers grouped by zone in queue order: the Parking screen. */
+export const selectZoneQueues = createSelector([selectAllDrivers, selectZones], (drivers, zones) =>
+  zones.map((zone) => ({
+    zone,
+    drivers: drivers.filter((d) => d.zoneId === zone.id && (d.status === "PARKED" || d.status === "AVAILABLE")).sort((a, b) => a.statusSince - b.statusSince),
+  })),
+);
 
 export interface NearestDriver {
   driver: Driver;
@@ -180,8 +118,7 @@ export function rankDrivers(point: LatLng, drivers: readonly Driver[], minSeats 
 
 export const selectNearestForForm = createSelector(
   [(s: RootState) => s.booking.form.pickup, (s: RootState) => s.booking.form.passengers, selectAllDrivers],
-  (pickup, passengers, drivers): NearestDriver[] =>
-    pickup ? rankDrivers(pickup, drivers, Number(passengers) || 1).slice(0, 3) : [],
+  (pickup, passengers, drivers): NearestDriver | null => (pickup ? (rankDrivers(pickup, drivers, Number(passengers) || 1)[0] ?? null) : null),
 );
 
 export interface FormQuote {
@@ -194,31 +131,19 @@ export const selectFormQuote = createSelector(
   [(s: RootState) => s.booking.form.pickup, (s: RootState) => s.booking.form.dropoff, (s: RootState) => s.booking.form.vias],
   (pickup, dropoff, vias): FormQuote | null => {
     if (!pickup || !dropoff) return null;
-    const miles = routeMiles([pickup, ...vias, dropoff]);
+    const miles = routeMiles([pickup, ...vias.flatMap((v) => (v.stop ? [v.stop] : [])), dropoff]);
     return { miles, durationMin: etaMinutes(miles), quotes: quoteFares(miles) };
   },
 );
 
-/** Alerts are missed offers, bidding and no-shows raised since the drawer was last opened. */
-export const selectAlerts = createSelector([(s: RootState) => s.jobs.events], (events) =>
-  events.filter((e) => e.type === "MISSED" || e.type === "NOSHOW" || (e.type === "STATUS" && e.text.includes("bid"))),
-);
-
-export const selectUnreadAlertCount = createSelector(
-  [selectAlerts, (s: RootState) => s.ui.alertsReadAt],
-  (alerts, readAt) => alerts.filter((a) => a.at > readAt).length,
-);
-
 export const selectFlaggedZones = createSelector([selectZones], (zones) => zones.filter((z) => z.surge || z.fullyBooked));
 
-export const selectJobEvents = createSelector(
-  [(s: RootState) => s.jobs.events, (_: RootState, jobId: string) => jobId],
-  (events, jobId) => events.filter((e) => e.jobId === jobId),
+export const selectUnreadStaff = createSelector([(s: RootState) => s.inbox.staffMessages, (s: RootState) => s.inbox.staffReadAt], (messages, readAt) =>
+  messages.filter((m) => m.at > readAt).length,
 );
 
-export const selectCaller = createSelector(
-  [(s: RootState) => s.booking.form.customerId, selectCustomers],
-  (id, customers) => (id ? (customers.find((c) => c.id === id) ?? null) : null),
+export const selectCaller = createSelector([(s: RootState) => s.booking.form.customerId, selectCustomers], (id, customers) =>
+  id ? (customers.find((c) => c.id === id) ?? null) : null,
 );
 
 /** The matched caller's recent places, offered first in the address lists. */
@@ -228,3 +153,5 @@ export const selectCallerRecentStops = createSelector([selectCaller], (caller): 
     return place ? [toStop(place)] : [];
   }),
 );
+
+export const selectSelectedJob = (s: RootState): Job | undefined => (s.ui.selectedJobId ? s.jobs.entities[s.ui.selectedJobId] : undefined);
