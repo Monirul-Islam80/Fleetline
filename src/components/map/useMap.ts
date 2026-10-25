@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { MapController } from "./MapController";
+import { MapController } from "./mapController";
 
 /**
  * Creates the map when its container mounts and destroys it on unmount.
