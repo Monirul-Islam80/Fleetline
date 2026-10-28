@@ -1,0 +1,38 @@
+# Local stack: PostGIS, Redis and the API.  docker compose up --build
+# The console runs separately (npm run dev in fleetline-console with .env.local from its .env.example).
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: fleet
+      POSTGRES_PASSWORD: fleet
+      POSTGRES_DB: fleet
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleet -d fleet"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  api:
+    build: .
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@db:5432/fleet?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_ORIGINS: http://localhost:3000
+      SIM_DRIVERS: "true"
+    ports: ["8080:8080"]
+
+volumes:
+  pgdata:
