@@ -11,7 +11,7 @@ import { PLACES } from "@/mock/geography";
 import { Icon } from "../ui/Icon";
 import { Button, Input } from "../ui/controls";
 import { useDismiss } from "../ui/overlays";
-import type { BaseLayer } from "../map/MapController";
+import type { BaseLayer } from "../map/mapController";
 import { useMap } from "../map/useMap";
 import s from "./dispatch.module.css";
 
